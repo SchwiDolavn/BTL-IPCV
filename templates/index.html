@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chest X-Ray Diagnosis - CNN Model</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2234;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-rose: #f43f5e;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #2d3a4f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans Pro', sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.3);
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        /* Main card */
+        .main-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Upload zone */
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 60px 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        .upload-zone.has-file {
+            border-color: var(--accent-emerald);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .upload-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+            color: var(--accent-emerald);
+            font-weight: 600;
+            display: none;
+        }
+
+        .file-name.show {
+            display: inline-block;
+        }
+
+        /* Preview section */
+        .preview-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .preview-section.show {
+            display: block;
+        }
+
+        .preview-image {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            margin: 0 auto;
+            display: block;
+        }
+
+        /* Submit button */
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 18px 40px;
+            margin-top: 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(59, 130, 246, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Loading state */
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            color: var(--text-secondary);
+        }
+
+        .loading.show {
+            display: flex;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Result section */
+        .result-section {
+            margin-top: 40px;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .result-header {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            color: var(--text-secondary);
+        }
+
+        .result-image {
+            width: 250px;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 3px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .result-diagnosis {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding: 15px 30px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .result-diagnosis.normal {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+            color: var(--accent-emerald);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .result-diagnosis.non-normal {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.2), rgba(244, 63, 94, 0.1));
+            color: var(--accent-rose);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+        }
+
+        .result-probability {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        .result-probability span {
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        /* Info section */
+        .info-section {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .info-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .info-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .info-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+
+        .info-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .main-card { padding: 25px; }
+            .upload-zone { padding: 40px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">🫁</div>
+            </div>
+            <h1>Chest X-Ray</h1>
+            <p class="subtitle">Bài tập lớn IPCV</p>
+        </header>
+
+        <div class="main-card">
+            <div class="upload-zone" id="upload-zone">
+                <div class="upload-icon">📤</div>
+                <p class="upload-text">Kéo thả vào đây</p>
+                <p class="upload-hint">hoặc click để chọn file</p>
+                <input type="file" id="file-input" accept="image/*">
+                <div class="file-name" id="file-name"></div>
+            </div>
+
+            <div class="preview-section" id="preview-section">
+                <img id="preview-image" class="preview-image" src="" alt="Preview">
+            </div>
+
+            <button class="submit-btn" id="submit-btn" disabled>
+                🔬 Phân tích ảnh X-quang
+            </button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <span>Đang phân tích...</span>
+            </div>
+
+            <div class="result-section" id="result-section">
+                <div class="result-card">
+                    <h2 class="result-header">Kết quả chẩn đoán</h2>
+                    <img id="result-image" class="result-image" src="" alt="X-Ray">
+                    <div class="result-diagnosis" id="result-diagnosis"></div>
+                    <p class="result-probability">
+                        Xác suất bất thường: <span id="result-probability"></span>%
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileName = document.getElementById('file-name');
+        const previewSection = document.getElementById('preview-section');
+        const previewImage = document.getElementById('preview-image');
+        const submitBtn = document.getElementById('submit-btn');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('result-section');
+        const resultImage = document.getElementById('result-image');
+        const resultDiagnosis = document.getElementById('result-diagnosis');
+        const resultProbability = document.getElementById('result-probability');
+
+        let selectedFile = null;
+
+        // Click to upload
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Vui lòng chọn file ảnh!');
+                return;
+            }
+
+            selectedFile = file;
+            uploadZone.classList.add('has-file');
+            fileName.textContent = '📎 ' + file.name;
+            fileName.classList.add('show');
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewSection.classList.add('show');
+            };
+            reader.readAsDataURL(file);
+
+            submitBtn.disabled = false;
+            resultSection.classList.remove('show');
+        }
+
+        // Submit
+        submitBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            submitBtn.disabled = true;
+            loading.classList.add('show');
+            resultSection.classList.remove('show');
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultImage.src = 'data:image/png;base64,' + data.image;
+                    resultDiagnosis.textContent = data.result;
+                    resultDiagnosis.className = 'result-diagnosis ' + data.result_class;
+                    resultProbability.textContent = data.probability;
+                    resultSection.classList.add('show');
+                } else {
+                    alert('Lỗi: ' + data.error);
+                }
+            } catch (error) {
+                alert('Có lỗi xảy ra: ' + error.message);
+            } finally {
+                loading.classList.remove('show');
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+
